@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fatigue Bot — Physiotherapy Assistant</title>
+<meta name="description" content="Fatigue Bot: Local-first multilingual physiotherapy chatbot for FSS fatigue assessment with voice and evidence-guided exercise advice (WHO/APTA/WCPT).">
+<style>
+  :root{
+    --brand:#4B8A62; --brand-600:#3F7A55; --brand-700:#2E5B40; --brand-100:#E6F7EF;
+    --ink:#0f172a; --muted:#64748b; --bg:#F6FAF8;
+  }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+  header{background:linear-gradient(135deg,var(--brand),#7BD1AE);color:#fff}
+  .wrap{max-width:1000px;margin:auto;padding:16px}
+  .row{display:grid;grid-template-columns:280px 1fr;gap:16px}
+  @media(max-width:900px){.row{grid-template-columns:1fr} .sticky{position:relative;top:auto}}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:14px;padding:10px 14px;cursor:pointer}
+  .btn:hover{background:var(--brand-600)}
+  .btn-outline{background:#fff;color:var(--brand);border:1px solid var(--brand);border-radius:14px;padding:8px 12px;cursor:pointer}
+  .btn-outline:hover{background:var(--brand-100)}
+  .btn-link{background:none;border:none;color:var(--brand-700);cursor:pointer;text-decoration:underline}
+  .badge{display:inline-flex;gap:8px;align-items:center;background:var(--brand-100);color:var(--brand);border-radius:999px;padding:6px 10px;font-size:.9rem}
+  .muted{color:var(--muted)}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .grid-7{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .center{text-align:center}
+  .avatar{position:relative;width:96px;height:96px;margin:auto}
+  .avatar svg{width:100%;height:100%}
+  .sticky{position:sticky;top:16px}
+  .modal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35);backdrop-filter:blur(2px);z-index:50}
+  .hide{display:none !important}
+  .rtl{direction:rtl}
+  .small{font-size:.9rem}
+  .footer{background:linear-gradient(135deg,#183326,var(--brand-700)); color:#e6f7ef}
+  .footer .wrap{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .footer .brandline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .footer img{vertical-align:middle;border-radius:6px;background:#fff}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:#214536;color:#cfeee0;border-radius:999px;padding:6px 12px;font-size:.85rem}
+  details.guidelines{margin-top:12px}
+  details.guidelines summary{cursor:pointer;font-weight:600}
+  .table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  .table td{background:#f9fafb;padding:10px;border:1px solid #e5e7eb}
+  .table td:first-child{border-radius:12px 0 0 12px;font-weight:600}
+  .table td:last-child{border-radius:0 12px 12px 0}
+  /* Bot bubble */
+  .bot-fab{position:fixed;right:16px;bottom:88px;z-index:40;font-size:26px;background:#fff;border:2px solid var(--brand);color:var(--brand);width:54px;height:54px;border-radius:50%;display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.18);cursor:pointer}
+  .bot-bubble{position:fixed;right:80px;bottom:120px;max-width:320px;background:#ffffff;border:1px solid #d1e8dc;border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:40}
+  .bot-bubble h4{margin:.25rem 0 .5rem;font-size:1rem;color:var(--brand-700)}
+  .bot-bubble .actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="display:flex;gap:14px;align-items:center">
+    <img src="logo.png" alt="Fatigue Bot logo" height="36" onerror="this.style.display='none'">
+    <div>
+      <h1 style="margin:0"><span id="app-name-h1">Fatigue Bot</span> — <span id="hdr-role">Physiotherapy Assistant</span></h1>
+      <div class="small" style="opacity:.95" id="hdr-tag">Multilingual fatigue assessment (FSS) • Privacy-first • Works offline</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <div class="row">
+    <aside class="card sticky">
+      <div class="center" id="side-rtl">
+        <div style="
+        width: 128px;
+        height: 128px;
+        border: 4px solid #7BD1AE;
+        border-radius: 50%;
+        background-color: #E6F7EF;
+        overflow: hidden;
+        display: inline-block;
+      ">
+        <img 
+          src="logo.png" 
+          alt="logo"
+          style="
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          "
+        />
+      </div>      
+        <h2 style="margin:.25rem 0 0" id="app-name-h2">Fatigue Bot</h2>
+        <div class="muted small" id="tagline">Evidence-based, empathetic guidance for your energy and movement</div>
+      </div>
+
+      <div style="margin-top:14px">
+        <label class="small" id="lbl-language">Language</label>
+        <div class="grid-3" style="margin-top:8px">
+          <button class="btn" id="lang-en">English</button>
+          <button class="btn" id="lang-hi">हिन्दी</button>
+          <button class="btn" id="lang-ur">اردو</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-outline" id="btn-speak">🔊 <span id="speak-txt">Speak</span></button>
+        <button class="btn-outline" id="btn-stop">⏹ <span id="stop-txt">Stop voice</span></button>
+        <button class="btn-outline" id="btn-listen">🎙 <span id="listen-txt">Dictate answer</span></button>
+      </div>
+      <div class="muted small" id="heard" style="margin-top:8px"></div>
+
+      <div class="muted small" id="privacy-line" style="margin-top:14px">Privacy-first • No personal health data sent to servers.</div>
+    </aside>
+
+    <section class="card" id="content">
+      <!-- dynamic content -->
+    </section>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="brandline">
+      <span class="pill" id="pill-privacy">🛡️ Privacy-first</span>
+      <span class="pill" id="pill-voice">🔊 Voice</span>
+      <span class="pill" id="pill-langs">🌐 EN • हिन्दी • اردو</span>
+    </div>
+    <div class="brandline small" id="footer-made">
+      <span id="made-text">Developed in India</span> 🇮🇳 <img src="logo.png" alt="HSS, CSJMU Kanpur" height="20" onerror="this.style.display='none'"> <span id="by-line">by HSS, CSJMU, Kanpur</span>
+    </div>
+  </div>
+</footer>
+
+<!-- Consent Modal -->
+<div class="modal" id="consent">
+  <div class="card" style="max-width:640px">
+    <h3 id="c-title">Consent & Privacy</h3>
+    <p class="small" id="c-desc">This tool stores your responses only in your browser (IndexedDB/LocalStorage). No personal health data is sent to servers. Use is voluntary and you can stop anytime.</p>
+    <ul class="small">
+      <li id="c-li1">Local-first storage (you can clear browser data).</li>
+      <li id="c-li2">This is not a diagnosis; for educational support only.</li>
+      <li id="c-li3">In emergencies or severe symptoms, seek medical care.</li>
+    </ul>
+    <button class="btn" id="c-accept">I Understand and Agree</button>
+  </div>
+</div>
+
+<!-- Bot FAB and Bubble -->
+<button class="bot-fab" id="bot-fab" aria-label="Open bot info">🤖</button>
+<div class="bot-bubble hide" id="bot-bubble" role="dialog" aria-live="polite">
+  <h4 id="bot-title">Hi! I’m your Fatigue Bot.</h4>
+  <div class="small" id="bot-text">I can explain the FSS and give gentle tips while you answer.</div>
+  <div class="actions">
+    <button class="btn-outline" id="bot-say">🔊 Speak</button>
+    <button class="btn-outline" id="bot-close">Close</button>
+  </div>
+</div>
+
+<script>
+// ------------------ Translations & Questions ------------------
+const T = {
+  en: {
+    dir: "ltr",
+    app_name: "Fatigue Bot",
+    app_role: "Physiotherapy Assistant",
+    hdr_tag: "Multilingual fatigue assessment (FSS) • Privacy-first • Works offline",
+    privacy_line: "Privacy-first • No personal health data sent to servers.",
+    pill_privacy: "🛡️ Privacy-first",
+    pill_voice: "🔊 Voice",
+    pill_langs: "🌐 EN • हिन्दी • اردو",
+    tagline: "Evidence-based, empathetic guidance for your energy and movement",
+    language: "Language",
+    choose_language: "Choose your language",
+    choose_language_desc: "You can change this anytime from the left panel.",
+    start: "Start FSS",
+    title: "Fatigue Severity Scale (FSS)",
+    desc: "We’ll ask 9 questions scored 1–7. Average of all answers gives your fatigue level. This is not a diagnosis; please consult a clinician for medical concerns.",
+    scale_hint: "Rate each statement from 1 (strongly disagree) to 7 (strongly agree).",
+    legend: "1–3: lower agreement • 4–5: moderate • 6–7: higher agreement",
+    speak: "Speak", stop_voice: "Stop voice", listen: "Dictate answer",
+    heard: "Heard",
+    q: n => "Question " + n,
+    intro_btn: "Start FSS",
+    restart: "Restart assessment",
+    result_header: "Your FSS Result",
+    score_title: "Score & Interpretation",
+    summary: avg => `Your average score is ${avg} (out of 7).`,
+    minimal: "Minimal fatigue", moderate: "Moderate fatigue", severe: "Severe fatigue",
+    plan: "Personalized Activity Plan",
+    notes: "Safety & Helpful Notes",
+    note1: "Start low and go slow — progress ~5–10% per week as tolerated.",
+    note2: "Stop if red flags: chest pain, dizziness, severe shortness of breath, or unusual symptoms.",
+    note3: "Unsure or worsening? Contact your physiotherapist or physician.",
+    aerobic: "Aerobic", strength: "Strength", flexibility: "Flexibility", other: "Other",
+    welcome: "Welcome! I’m Fatigue Bot. Select your language to begin.",
+    coach_intro: "Let’s complete the FSS. Take your time—answer honestly. You can speak or tap 1–7.",
+    coach_result: "Here is your plan based on your average FSS score.",
+    coach_header: (avg, levelTxt) => `Based on your score (avg ${avg}), your level is ${levelTxt}.`,
+    coach_minimal: "You’re doing well. Maintain a weekly routine: walk/cycle, 2–3 light strength sessions, and daily mobility. Add 1–2 easy rest days.",
+    coach_moderate: "We’ll rebuild gradually. Short walks and light band work. Activity pacing: small bouts, regular breaks, steady progress. Gentle yoga/mobility most days.",
+    coach_severe: "Focus on comfort and recovery: chair-based movement, breathing practice, hydration, and short micro-sessions. Seek a physiotherapy review to personalize safely.",
+    coach_safety: "If symptoms worsen or you feel unsafe, pause and consult a professional.",
+    consent: { title: "Consent & Privacy", desc: "This tool stores your responses only in your browser (IndexedDB/LocalStorage). No personal health data is sent to servers. Use is voluntary and you can stop anytime.",
+      li1: "Local-first storage (you can clear browser data).",
+      li2: "No diagnosis; for educational support only.",
+      li3: "In emergencies or severe symptoms, seek medical care.",
+      accept: "I Understand and Agree"
+    },
+    questions: [
+      "My motivation is lower when I am fatigued.",
+      "Exercise brings on my fatigue.",
+      "I am easily fatigued.",
+      "Fatigue interferes with my physical functioning.",
+      "Fatigue causes frequent problems for me.",
+      "My fatigue prevents sustained physical functioning.",
+      "Fatigue interferes with carrying out certain duties and responsibilities.",
+      "Fatigue is among my three most disabling symptoms.",
+      "Fatigue interferes with my work, family, or social life."
+    ],
+    // Guidelines
+    guidelines_btn: "View WHO/APTA/WCPT Guidelines",
+    guidelines_close: "Hide Guidelines",
+    guidelines_intro: "Evidence-aligned general activity guidance (adapt based on your FSS level and medical advice):",
+    g_rows: [
+      ["Adults (18–64)", "150–300 min/week moderate OR 75–150 min/week vigorous aerobic; muscle-strengthening 2+ days/week."],
+      ["Older adults (65+)", "As above, plus functional balance and strength training ≥3 days/week if fall risk; move more, sit less."],
+      ["Strength", "1–3 sets of 8–12 reps for major muscle groups on non-consecutive days; begin with light resistance."],
+      ["Flexibility/Mobility", "Most days: 5–10 min gentle stretching; avoid painful end ranges; breathe steadily."],
+      ["Pacing & Recovery", "Break activity into small bouts with rest; increase volume ~5–10%/week; prioritize sleep, hydration, and nutrition."]
+    ],
+    // Footer
+    made_in: "Developed in India",
+    by_line: "by HSS, CSJMU, Kanpur",
+    // Bot bubble
+    bot_title_intro: "Hi! I’m your Fatigue Bot 🤖",
+    bot_text_intro: "I’ll guide you through FSS and share small tips. Tap numbers or dictate answers with the mic.",
+    bot_title_fss: "Tip: Keep it honest and calm",
+    bot_text_fss: "Rate how statements felt in the past week. If unsure, choose the closest number—you can still progress safely.",
+    bot_title_result: "Now, let’s build momentum",
+    bot_text_result: "Use pacing, hydrate, and follow the plan below. Click guidelines for WHO/APTA/WCPT-aligned detail.",
+    bot_say: "🔊 Speak",
+    bot_close: "Close"
+  },
+  hi: {
+    dir: "ltr",
+    app_name: "फटीग बॉट",
+    app_role: "फिजियोथेरेपी सहायक",
+    hdr_tag: "बहुभाषी थकान आकलन (FSS) • गोपनीयता-प्रथम • ऑफलाइन चलता है",
+    privacy_line: "गोपनीयता-प्रथम • कोई व्यक्तिगत स्वास्थ्य डेटा सर्वर पर नहीं भेजा जाता।",
+    pill_privacy: "🛡️ गोपनीयता-प्रथम",
+    pill_voice: "🔊 आवाज़",
+    pill_langs: "🌐 EN • हिन्दी • اردو",
+    tagline: "आपकी ऊर्जा और मूवमेंट के लिए प्रमाण-आधारित, सहानुभूतिपूर्ण मार्गदर्शन",
+    language: "भाषा",
+    choose_language: "अपनी भाषा चुनें",
+    choose_language_desc: "आप इसे कभी भी बाएँ पैनल से बदल सकते हैं।",
+    start: "FSS शुरू करें",
+    title: "फ़टीग सीवेरिटी स्केल (FSS)",
+    desc: "हम 9 प्रश्न पूछेंगे (स्कोर 1–7). औसत स्कोर से थकान स्तर पता चलता है। यह निदान नहीं है; चिकित्सक से सलाह लें।",
+    scale_hint: "हर कथन को 1 (पूरी तरह असहमत) से 7 (पूरी तरह सहमत) तक रेट करें।",
+    legend: "1–3: कम सहमति • 4–5: मध्यम • 6–7: अधिक",
+    speak: "आवाज़ चलाएँ", stop_voice: "आवाज़ रोकें", listen: "उत्तर बोलें",
+    heard: "सुना गया",
+    q: n => "प्रश्न " + n,
+    intro_btn: "FSS शुरू करें",
+    restart: "पुनः शुरुआत करें",
+    result_header: "आपका FSS परिणाम",
+    score_title: "स्कोर और व्याख्या",
+    summary: avg => `आपका औसत स्कोर ${avg} (7 में से) है।`,
+    minimal: "न्यूनतम थकान", moderate: "मध्यम थकान", severe: "गंभीर थकान",
+    plan: "व्यक्तिगत गतिविधि योजना",
+    notes: "सुरक्षा और सहायक सुझाव",
+    note1: "धीरे शुरू करें और धीरे-धीरे ~5–10% प्रति सप्ताह बढ़ाएँ।",
+    note2: "रेड फ्लैग पर रुकें: सीने में दर्द, चक्कर, तीव्र सांस फूलना।",
+    note3: "शंका हो या बिगड़े तो फिजियो/डॉक्टर से मिलें।",
+    aerobic: "एरोबिक", strength: "स्ट्रेंथ", flexibility: "लचीलापन", other: "अन्य",
+    welcome: "स्वागत है! मैं फटीग बॉट हूँ। शुरू करने के लिए भाषा चुनें।",
+    coach_intro: "आइए FSS पूरा करें। समय लें—ईमानदारी से उत्तर दें। आप 1–7 बोल या टैप कर सकते हैं।",
+    coach_result: "आपके औसत FSS स्कोर के आधार पर योजना नीचे है।",
+    coach_header: (avg, levelTxt) => `आपका औसत ${avg} है; स्तर: ${levelTxt}.`,
+    coach_minimal: "आप अच्छा कर रहे हैं। साप्ताहिक रूटीन रखें: वॉक/साइक्लिंग, 2–3 हल्के स्ट्रेंथ सेशन और दैनिक मोबिलिटी। 1–2 आराम दिन जोड़ें।",
+    coach_moderate: "धीरे-धीरे लौटेंगे। छोटी वॉक और हल्का बैंड वर्क। एक्टिविटी पेसिंग—छोटे बाउट, नियमित ब्रेक, स्थिर प्रगति। अधिकांश दिनों में जेंटल योग/मोबिलिटी।",
+    coach_severe: "आराम और रिकवरी पर ध्यान दें: चेयर-बेस्ड मूवमेंट, श्वास अभ्यास, हाइड्रेशन और छोटे-छोटे सत्र। सुरक्षित निजीकरण के लिए फिजियो से मिलें।",
+    coach_safety: "लक्षण बढ़ें/असुरक्षित लगे तो रोकें और विशेषज्ञ से मिलें।",
+    consent: { title: "सहमति और गोपनीयता", desc: "यह उपकरण आपके उत्तर केवल ब्राउज़र में (IndexedDB/LocalStorage) रखता है। कोई व्यक्तिगत स्वास्थ्य डेटा सर्वर पर नहीं भेजा जाता। उपयोग स्वैच्छिक है।",
+      li1: "लोकल-फर्स्ट स्टोरेज (आप साफ कर सकते हैं)।",
+      li2: "यह निदान नहीं है; केवल शैक्षिक सहायता।",
+      li3: "आपातकाल/गंभीर लक्षण पर तुरंत चिकित्सा सहायता लें।",
+      accept: "मैं सहमत हूँ"
+    },
+    questions: [
+      "थकान होने पर मेरी प्रेरणा कम हो जाती है।",
+      "व्यायाम से मेरी थकान बढ़ जाती है।",
+      "मैं जल्दी थक जाता/जाती हूँ।",
+      "थकान मेरी शारीरिक गतिविधियों में बाधा डालती है।",
+      "थकान मेरे लिए अक्सर समस्या बनती है।",
+      "थकान मुझे लंबे समय तक शारीरिक कार्य करने से रोकती है।",
+      "थकान कुछ कर्तव्यों और ज़िम्मेदारियों को निभाने में बाधा डालती है।",
+      "थकान मेरे तीन सबसे ज्यादा विकलांग करने वाले लक्षणों में से एक है।",
+      "थकान मेरे काम, परिवार या सामाजिक जीवन में बाधा डालती है।"
+    ],
+    guidelines_btn: "WHO/APTA/WCPT दिशानिर्देश देखें",
+    guidelines_close: "दिशानिर्देश छिपाएँ",
+    guidelines_intro: "सबूत-संगत सामान्य गतिविधि मार्गदर्शन (अपने FSS स्तर और चिकित्सा सलाह के अनुसार अनुकूलित करें):",
+    g_rows: [
+      ["वयस्क (18–64)", "प्रति सप्ताह 150–300 मिनट मध्यम या 75–150 मिनट तेज़ एरोबिक; सप्ताह में ≥2 दिन मांसपेशी सुदृढ़ीकरण।"],
+      ["वरिष्ठ (65+)", "ऊपर के समान, साथ में कार्यात्मक बैलेंस/स्ट्रेंथ ≥3 दिन/सप्ताह (गिरने का जोखिम हो तो); कम बैठें, ज़्यादा चलें।"],
+      ["स्ट्रेंथ", "1–3 सेट, 8–12 रेप्स; गैर-लगातार दिनों में प्रमुख मांसपेशी समूह; हल्के भार से शुरुआत।"],
+      ["लचीलापन/मोबिलिटी", "अधिकांश दिनों में 5–10 मिनट कोमल स्ट्रेचिंग; दर्दनाक एंड-रेंज से बचें; नियमित श्वास।"],
+      ["पेसिंग व रिकवरी", "गतिविधि को छोटे हिस्सों में बाँटें; मात्रा ~5–10%/सप्ताह बढ़ाएँ; नींद, जल, पोषण को प्राथमिकता दें।"]
+    ],
+    made_in: "भारत में विकसित",
+    by_line: "द्वारा HSS, CSJMU, कानपुर",
+    bot_title_intro: "नमस्ते! मैं आपका फटीग बॉट 🤖",
+    bot_text_intro: "मैं FSS समझाऊँगा और छोटे सुझाव दूँगा। माइक्रोफ़ोन से उत्तर बोलें या 1–7 टैप करें।",
+    bot_title_fss: "सुझाव: शांत रहें, ईमानदारी से रेट करें",
+    bot_text_fss: "पिछले सप्ताह जैसा महसूस हुआ वैसा अंक दें। संदेह हो तो सबसे नज़दीकी अंक चुनें—सुरक्षित प्रगति संभव है।",
+    bot_title_result: "अब गति बनाएँ",
+    bot_text_result: "पेसिंग अपनाएँ, जल पिएँ, और नीचे दी योजना का पालन करें। WHO/APTA/WCPT विवरण के लिए दिशानिर्देश खोलें।",
+    bot_say: "🔊 सुनाएँ",
+    bot_close: "बंद करें"
+  },
+  ur: {
+    dir: "rtl",
+    app_name: "فیٹیگ بوٹ",
+    app_role: "فزیوتھراپی اسسٹنٹ",
+    hdr_tag: "کثیر لسانی تھکن جائزہ (FSS) • پرائیویسی پہلے • آف لائن چلتا ہے",
+    privacy_line: "پرائیویسی پہلے • کوئی ذاتی صحت ڈیٹا سرور پر نہیں جاتا۔",
+    pill_privacy: "🛡️ پرائیویسی پہلے",
+    pill_voice: "🔊 آواز",
+    pill_langs: "🌐 EN • हिन्दी • اردو",
+    tagline: "آپ کی توانائی اور حرکت کے لیے شواہد پر مبنی ہمدردانہ رہنمائی",
+    language: "زبان",
+    choose_language: "اپنی زبان منتخب کریں",
+    choose_language_desc: "آپ اسے بائیں پینل سے کبھی بھی بدل سکتے ہیں۔",
+    start: "FSS شروع کریں",
+    title: "فٹیگ سیویریٹی اسکیل (FSS)",
+    desc: "ہم 9 سوال پوچھیں گے، اسکور 1–7۔ اوسط اسکور سے تھکن کی سطح معلوم ہوتی ہے۔ یہ تشخیص نہیں ہے؛ ڈاکٹر سے مشورہ کریں۔",
+    scale_hint: "ہر بیان کو 1 (بالکل اختلاف) سے 7 (مکمل اتفاق) تک ریٹ کریں۔",
+    legend: "1–3: کم اتفاق • 4–5: درمیانہ • 6–7: زیادہ",
+    speak: "آواز چلائیں", stop_voice: "آواز روکیں", listen: "جواب بولیں",
+    heard: "سنا گیا",
+    q: n => "سوال " + n,
+    intro_btn: "FSS شروع کریں",
+    restart: "دوبارہ شروع کریں",
+    result_header: "آپ کا FSS نتیجہ",
+    score_title: "اسکور اور تشریح",
+    summary: avg => `آپ کا اوسط اسکور ${avg} (7 میں سے) ہے۔`,
+    minimal: "کم از کم تھکن", moderate: "درمیانی تھکن", severe: "شدید تھکن",
+    plan: "ذاتی نوعیت کا پلان",
+    notes: "حفاظتی نکات",
+    note1: "آہستہ شروع کریں اور ~5–10% فی ہفتہ بڑھائیں۔",
+    note2: "ریڈ فلیگ پر رکیں: سینے میں درد، چکر، سانس میں شدید دقت۔",
+    note3: "بگاڑ ہو یا شبہ ہو تو فزیو/ڈاکٹر سے رجوع کریں۔",
+    aerobic: "ایروبک", strength: "اسٹرینتھ", flexibility: "لچک", other: "دیگر",
+    welcome: "خوش آمدید! میں فیٹیگ بوٹ ہوں۔ زبان منتخب کریں۔",
+    coach_intro: "آئیے FSS مکمل کریں۔ سچّا جواب دیں—آپ 1–7 بول یا ٹیپ کر سکتے ہیں۔",
+    coach_result: "آپ کے اوسط FSS اسکور کی بنیاد پر پلان نیچے ہے۔",
+    coach_header: (avg, levelTxt) => `آپ کا اوسط ${avg} ہے؛ سطح: ${levelTxt}.`,
+    coach_minimal: "آپ اچھا کر رہے ہیں۔ ہفتہ وار معمول برقرار رکھیں: چہل قدمی/سائکلنگ، 2–3 ہلکے اسٹرینتھ سیشن اور روزانہ موبلٹی۔ 1–2 آرام کے دن رکھیں۔",
+    coach_moderate: "ہم بتدریج واپس آئیں گے۔ چھوٹی واک اور ہلکا بینڈ ورک۔ ایکٹیویٹی پیسنگ—چھوٹے وقفے، باقاعدہ بریک، مستحکم پیش رفت۔ زیادہ تر دن نرم یوگا/موبلٹی۔",
+    coach_severe: "آرام اور بحالی پر توجہ دیں: کرسی پر مبنی حرکت، سانس کی مشق، پانی اور مختصر سیشن۔ محفوظ ذاتی پلان کے لیے فزیو سے ملیں۔",
+    coach_safety: "اگر علامات بڑھیں یا غیر محفوظ محسوس ہو تو رکیں اور پروفیشنل سے رجوع کریں۔",
+    consent: { title: "رضامندی اور پرائیویسی", desc: "یہ ٹول آپ کے جوابات صرف براؤزر میں محفوظ کرتا ہے (IndexedDB/LocalStorage). کوئی ذاتی صحت ڈیٹا سرور پر نہیں جاتا۔",
+      li1: "لوکل اسٹوریج (جب چاہیں صاف کریں)",
+      li2: "تشخیص نہیں؛ صرف تعلیمی مدد",
+      li3: "ہنگامی/شدید علامات میں فوری طبی مدد لیں",
+      accept: "میں متفق ہوں"
+    },
+    questions: [
+      "تھکن کی حالت میں میری حوصلہ افزائی کم ہو جاتی ہے۔",
+      "ورزش میری تھکن بڑھا دیتی ہے۔",
+      "میں جلدی تھک جاتا/جاتی ہوں۔",
+      "تھکن میری جسمانی کارکردگی میں مداخلت کرتی ہے۔",
+      "تھکن مجھے اکثر مسائل میں ڈالتی ہے۔",
+      "تھکن مجھے طویل جسمانی کام سے روکتی ہے۔",
+      "تھکن بعض ذمہ داریوں اور فرائض کی ادائیگی میں رکاوٹ بنتی ہے۔",
+      "تھکن میرے تین سب سے زیادہ معذور کرنے والے علامات میں شامل ہے۔",
+      "تھکن میرے کام، خاندان یا سماجی زندگی میں مداخلت کرتی ہے۔"
+    ],
+    guidelines_btn: "WHO/APTA/WCPT رہنما اصول دیکھیں",
+    guidelines_close: "رہنما اصول چھپائیں",
+    guidelines_intro: "شواہد پر مبنی عمومی سرگرمی رہنمائی (اپنے FSS لیول اور طبی مشورے کے مطابق ڈھالیں):",
+    g_rows: [
+      ["بالغ (18–64)", "ہفتہ وار 150–300 منٹ معتدل یا 75–150 منٹ تیز ایروبک؛ ہفتہ میں ≥2 دن مسل مضبوطی۔"],
+      ["بزرگ (65+)", "اوپر جیسا، اور اگر گرنے کا خطرہ ہو تو توازُن/طاقت کی مشقیں ≥3 دن/ہفتہ؛ کم بیٹھیں، زیادہ چلیں۔"],
+      ["اسٹرینتھ", "1–3 سیٹ، 8–12 ریپس؛ بڑے مسلز کے لیے غیر متواتر دنوں پر؛ ہلکے وزن سے آغاز۔"],
+      ["لچک/موبلٹی", "زیادہ دن 5–10 منٹ نرم اسٹریچ؛ تکلیف دہ آخری زاویوں سے بچیں؛ سانس ہموار رکھیں۔"],
+      ["پی سنگ اور ریکوری", "سرگرمی کو چھوٹے حصوں میں تقسیم کریں؛ حجم ~5–10% ہفتہ وار بڑھائیں؛ نیند، پانی اور غذائیت کو ترجیح دیں۔"]
+    ],
+    made_in: "بھارت میں تیار کردہ",
+    by_line: "کی جانب سے HSS، CSJMU، کانپور",
+    bot_title_intro: "سلام! میں آپ کا فیٹیگ بوٹ 🤖",
+    bot_text_intro: "میں FSS سمجھاؤں گا اور چھوٹے مشورے دوں گا۔ مائیک سے جواب بولیں یا 1–7 ٹیپ کریں۔",
+    bot_title_fss: "مشورہ: پُرسکون رہیں، سچّا درجہ دیں",
+    bot_text_fss: "گزشتہ ہفتے جیسا محسوس ہوا ویسا نمبر دیں۔ شک ہو تو قریب ترین نمبر لیں—محفوظ پیش رفت ممکن ہے۔",
+    bot_title_result: "اب رفتار قائم رکھیں",
+    bot_text_result: "پی سنگ اپنائیں، پانی پئیں اور نیچے دیا گیا پلان فالو کریں۔ WHO/APTA/WCPT تفصیل کیلئے رہنما اصول کھولیں۔",
+    bot_say: "🔊 سنائیں",
+    bot_close: "بند کریں"
+  }
+};
+
+// Localized recommendations by level
+const RECS = {
+  en: {
+    minimal: { aerobic:"Aim 150–300 min/week moderate or 75–150 min/week vigorous aerobic.",
+               strength:"2–3 sessions/week, 1–2 sets of 8–12 reps for major muscle groups.",
+               flexibility:"Daily gentle stretching 5–10 min.",
+               other:"Balance/coordination 2–3×/week; prioritize sleep and hydration." },
+    moderate: { aerobic:"Start with 10–15 min, 3×/week; add ~5 min weekly as tolerated.",
+                strength:"Light resistance 2×/week (bands), 1 set of 8–10 reps; slow progression.",
+                flexibility:"Gentle yoga/mobility 10 min/day; avoid end-range holds early.",
+                other:"Activity pacing with rest breaks; relaxation breathing (box 4-4-4-4)." },
+    severe:   { aerobic:"Chair/recumbent 5–10 min on alternate days; effort easy (RPE 2–3/10).",
+                strength:"Start with gentle isometrics; skip heavy loads initially.",
+                flexibility:"Comfort-focused ROM in micro-sessions 2–3×/day.",
+                other:"Diaphragmatic breathing, energy conservation, frequent micro-rests." }
+  },
+  hi: {
+    minimal: { aerobic:"प्रति सप्ताह 150–300 मिनट मध्यम या 75–150 मिनट तीव्र एरोबिक।",
+               strength:"2–3 सत्र/सप्ताह; प्रमुख मांसपेशियों के 1–2 सेट, 8–12 रेप्स।",
+               flexibility:"रोज़ाना 5–10 मिनट हल्की स्ट्रेचिंग।",
+               other:"संतुलन/कोऑर्डिनेशन 2–3×/सप्ताह; नींद और जल पर ध्यान दें।" },
+    moderate: { aerobic:"10–15 मिनट, 3×/सप्ताह से शुरू करें; सहने पर ~5 मिनट/सप्ताह बढ़ाएँ।",
+                strength:"हल्का रेसिस्टेंस 2×/सप्ताह (बैंड); 1 सेट 8–10 रेप्स; धीरे-धीरे बढ़ाएँ।",
+                flexibility:"जेंटल योग/मोबिलिटी 10 मिनट/दिन; शुरुआत में एंड-रेंज से बचें।",
+                other:"एक्टिविटी पेसिंग, नियमित विश्राम; बॉक्स ब्रीदिंग 4-4-4-4।" },
+    severe:   { aerobic:"चेयर/रिकम्बेंट 5–10 मिनट, एक दिन छोड़कर; प्रयास सरल (RPE 2–3/10)।",
+                strength:"हल्के आइसोमेट्रिक संकुचन से शुरुआत; भारी वज़न अभी न करें।",
+                flexibility:"आरामदायक रेंज-ऑफ-मोशन, छोटे-छोटे सत्र 2–3×/दिन।",
+                other:"डायफ्रामैटिक ब्रीदिंग, ऊर्जा संरक्षण, बार-बार छोटे विश्राम।" }
+  },
+  ur: {
+    minimal: { aerobic:"ہفتہ وار 150–300 منٹ معتدل یا 75–150 منٹ تیز ایروبک۔",
+               strength:"2–3 سیشن/ہفتہ؛ بڑے مسلز کے 1–2 سیٹ، 8–12 ریپس۔",
+               flexibility:"روزانہ 5–10 منٹ نرم اسٹریچنگ۔",
+               other:"توازُن/کوآرڈینیشن 2–3×/ہفتہ؛ نیند اور پانی کو ترجیح دیں۔" },
+    moderate: { aerobic:"10–15 منٹ، 3×/ہفتہ سے آغاز؛ برداشت کے مطابق ~5 منٹ/ہفتہ بڑھائیں۔",
+                strength:"ہلکی مزاحمتی ورزش 2×/ہفتہ (بینڈ)؛ 1 سیٹ 8–10 ریپس؛ آہستہ اضافہ۔",
+                flexibility:"نرم یوگا/موبلٹی 10 منٹ/دن؛ ابتدا میں آخری زاویوں سے گریز۔",
+                other:"ایکٹیویٹی پی سنگ، باقاعدہ وقفے؛ باکس بریتھنگ 4-4-4-4۔" },
+    severe:   { aerobic:"کرسی/ریکمبنٹ پر 5–10 منٹ ایک دن چھوڑ کر؛ کوشش ہلکی (RPE 2–3/10)۔",
+                strength:"ہلکے آئسومیٹرکس سے آغاز؛ بھاری وزن فی الحال نہیں۔",
+                flexibility:"آرام دہ رینج آف موشن، مختصر سیشن 2–3×/دن۔",
+                other:"ڈایافرامیٹک سانس، توانائی کی بچت، بار بار چھوٹے وقفے۔" }
+  }
+};
+
+let lang = "en";
+let answers = [];
+let consentOk = false;
+
+const $ = (sel)=>document.querySelector(sel);
+
+// ------------------ Render helpers ------------------
+function setLang(code){
+  lang = code;
+  const L = T[lang];
+  document.body.classList.toggle('rtl', L.dir === 'rtl');
+  $('#side-rtl').classList.toggle('rtl', L.dir === 'rtl');
+  $('#tagline').textContent = L.tagline;
+  $('#lbl-language').textContent = L.language;
+  $('#speak-txt').textContent = L.speak;
+  $('#stop-txt').textContent = L.stop_voice;
+  $('#listen-txt').textContent = L.listen;
+  $('#hdr-role').textContent = L.app_role;
+  $('#hdr-tag').textContent = L.hdr_tag;
+  $('#privacy-line').textContent = L.privacy_line;
+  $('#pill-privacy').textContent = L.pill_privacy;
+  $('#pill-voice').textContent = L.pill_voice;
+  $('#pill-langs').textContent = L.pill_langs;
+  $('#made-text').textContent = L.made_in;
+  $('#by-line').textContent = L.by_line;
+  // app name in header & sidebar
+  $('#app-name-h1').textContent = L.app_name;
+  $('#app-name-h2').textContent = L.app_name;
+  renderIntro();
+  localStorage.setItem('fss_lang', lang);
+}
+
+function renderIntro(){
+  const L = T[lang];
+  $('#content').innerHTML = `
+    <div>
+      <h3 style="margin-top:0">${L.title}</h3>
+      <p>${L.desc}</p>
+      <div class="muted small">${L.choose_language_desc}</div>
+      <div style="margin-top:12px"><button class="btn" id="start">${L.start}</button></div>
+    </div>
+  `;
+  $('#start').onclick = ()=> { answers=[]; renderFSS(); updateBot('intro'); };
+  updateBot('intro');
+}
+
+function renderFSS(){
+  const L = T[lang];
+  const idx = answers.length;
+  const q = L.questions[idx];
+  $('#content').innerHTML = `
+    <div>
+      <div class="muted small">${L.scale_hint}</div>
+      <div class="card" style="background:#f8fffb;border-color:#d8efe3;margin:8px 0 12px">
+        <div style="font-weight:600">${L.q(idx+1)}</div>
+        <div style="font-size:1.1rem">${q}</div>
+      </div>
+      <div class="grid-7">
+        ${[1,2,3,4,5,6,7].map(n=>`<button class="btn-outline" data-n="${n}">${n}</button>`).join('')}
+      </div>
+      <div class="muted small" style="margin-top:8px">${L.legend}</div>
+    </div>
+  `;
+  $('#content').querySelectorAll('[data-n]').forEach(btn=>{
+    btn.onclick = ()=>submitAnswer(+btn.dataset.n);
+  });
+  updateBot('fss');
+}
+
+function renderGuidelinesBlock(){
+  const L = T[lang];
+  const rows = L.g_rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  return `
+  <details class="guidelines" open>
+    <summary>${L.guidelines_intro}</summary>
+    <table class="table" style="margin-top:8px">${rows}</table>
+    <div class="small muted" style="margin-top:8px">
+      Sources aligned with WHO 2020 adult physical activity guidelines and common APTA/WCPT recommendations. Adapt to personal medical status.
+    </div>
+  </details>`;
+}
+
+function renderResult(){
+  const L = T[lang];
+  const total = answers.reduce((a,b)=>a+b,0);
+  const avg = (total/9).toFixed(2);
+  let level = 'minimal';
+  if (avg >= 5) level = 'severe';
+  else if (avg >= 4) level = 'moderate';
+  const levelTxt = L[level];
+  const plan = RECS[lang][level];
+
+  const coach = [
+    L.coach_header(avg, levelTxt),
+    L['coach_'+level],
+    L.coach_safety
+  ].join("\\n\\n");
+
+  $('#content').innerHTML = `
+    <div>
+      <h3 style="margin-top:0">${L.result_header}</h3>
+      <div class="badge">${L.score_title}</div>
+      <p style="margin:.5rem 0">${L.summary(avg)}</p>
+      <p class="badge">${levelTxt}</p>
+
+      <div class="card" style="margin-top:12px">
+        <div style="font-weight:600;margin-bottom:6px">${L.plan}</div>
+        <table class="table">
+          <tr><td>${L.aerobic}</td><td>${plan.aerobic}</td></tr>
+          <tr><td>${L.strength}</td><td>${plan.strength}</td></tr>
+          <tr><td>${L.flexibility}</td><td>${plan.flexibility}</td></tr>
+          <tr><td>${L.other}</td><td>${plan.other}</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="font-weight:600;margin-bottom:6px">${L.app_name}</div>
+        <p id="coach" style="white-space:pre-wrap;margin:0">${coach}</p>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <button class="btn" id="btn-guidelines">${L.guidelines_btn}</button>
+        <div id="guidelines" class="hide"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="font-weight:600;margin-bottom:6px">${L.notes}</div>
+        <ul class="small">
+          <li>${L.note1}</li>
+          <li>${L.note2}</li>
+          <li>${L.note3}</li>
+        </ul>
+      </div>
+
+      <div style="margin-top:12px">
+        <button class="btn" id="restart">${L.restart}</button>
+      </div>
+    </div>
+  `;
+  $('#restart').onclick = ()=>{ answers=[]; renderIntro(); };
+  $('#btn-guidelines').onclick = ()=>{
+    const g = $('#guidelines'); const btn = $('#btn-guidelines');
+    if (g.classList.contains('hide')){
+      g.innerHTML = renderGuidelinesBlock();
+      g.classList.remove('hide'); btn.textContent = L.guidelines_close;
+    } else {
+      g.classList.add('hide'); g.innerHTML = ""; btn.textContent = L.guidelines_btn;
+    }
+  };
+  // save local session
+  try{
+    const list = JSON.parse(localStorage.getItem('fss_sessions')||'[]');
+    list.push({ ts: Date.now(), lang, answers });
+    localStorage.setItem('fss_sessions', JSON.stringify(list));
+  }catch{}
+  updateBot('result');
+}
+
+function submitAnswer(n){
+  answers.push(n);
+  if (answers.length===9) renderResult(); else renderFSS();
+}
+
+// ------------------ Voice (Web Speech API) ------------------
+const hasTTS = 'speechSynthesis' in window;
+const hasSTT = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+let recog = null;
+
+function speak(text){
+  if(!hasTTS) return alert(noTTSMsg());
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang==='hi' ? 'hi-IN' : (lang==='ur' ? 'ur-PK' : 'en-IN');
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+function stopSpeak(){ if(hasTTS) window.speechSynthesis.cancel(); }
+
+function startListen(){
+  if(!hasSTT) return alert(noSTTMsg());
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recog = new Rec();
+  recog.lang = lang==='hi' ? 'hi-IN' : (lang==='ur' ? 'ur-PK' : 'en-IN');
+  recog.interimResults = false;
+  recog.maxAlternatives = 1;
+  recog.onresult = (e)=>{
+    const text = e.results?.[0]?.[0]?.transcript || '';
+    $('#heard').textContent = T[lang].heard + ': “' + text + '”';
+    const m = text.match(/[1-7]/);
+    if(m && answers.length<9){ submitAnswer(parseInt(m[0],10)); }
+  };
+  recog.onerror = ()=>{};
+  recog.onend = ()=>{};
+  recog.start();
+}
+function stopListen(){ try{recog && recog.stop()}catch{} }
+
+function noTTSMsg(){ return lang==='hi' ? 'इस ब्राउज़र में TTS समर्थित नहीं है' : (lang==='ur' ? 'اس براؤزر میں TTS دستیاب نہیں' : 'Text-to-speech not supported in this browser'); }
+function noSTTMsg(){ return lang==='hi' ? 'इस ब्राउज़र में STT समर्थित नहीं है' : (lang==='ur' ? 'اس براؤزر میں STT دستیاب نہیں' : 'Speech recognition not supported in this browser'); }
+
+// ------------------ Bot Bubble ------------------
+const botFab = $('#bot-fab');
+const botBubble = $('#bot-bubble');
+const botTitle = $('#bot-title');
+const botText = $('#bot-text');
+const botSay = $('#bot-say');
+const botClose = $('#bot-close');
+$('#bot-close').onclick = ()=> botBubble.classList.add('hide');
+$('#bot-say').onclick = ()=> speak(botTitle.textContent + '. ' + botText.textContent);
+botFab.onclick = ()=> botBubble.classList.toggle('hide');
+
+function updateBot(mode){
+  const L = T[lang];
+  botSay.textContent = L.bot_say;
+  botClose.textContent = L.bot_close;
+  if (mode==='fss'){
+    botTitle.textContent = L.bot_title_fss;
+    botText.textContent = L.bot_text_fss;
+  } else if (mode==='result'){
+    botTitle.textContent = L.bot_title_result;
+    botText.textContent = L.bot_text_result;
+  } else {
+    botTitle.textContent = L.bot_title_intro;
+    botText.textContent = L.bot_text_intro;
+  }
+}
+
+// ------------------ Events & Init ------------------
+document.getElementById('lang-en').onclick = ()=> setLang('en');
+document.getElementById('lang-hi').onclick = ()=> setLang('hi');
+document.getElementById('lang-ur').onclick = ()=> setLang('ur');
+
+document.getElementById('btn-speak').onclick = ()=> {
+  const L = T[lang];
+  const stepText = answers.length===0 ? L.welcome + ' ' + L.coach_intro
+                   : answers.length<9 ? (L.q(answers.length+1)+': '+T[lang].questions[answers.length])
+                   : L.coach_result;
+  speak(stepText);
+};
+document.getElementById('btn-stop').onclick = ()=> stopSpeak();
+document.getElementById('btn-listen').onclick = ()=> (recog ? stopListen() : startListen());
+
+// Consent modal
+function applyConsentText(){
+  const L = T[lang];
+  document.getElementById('c-title').textContent = L.consent.title;
+  document.getElementById('c-desc').textContent = L.consent.desc;
+  document.getElementById('c-li1').textContent = L.consent.li1;
+  document.getElementById('c-li2').textContent = L.consent.li2;
+  document.getElementById('c-li3').textContent = L.consent.li3;
+  document.getElementById('c-accept').textContent = L.consent.accept;
+}
+document.getElementById('c-accept').onclick = ()=>{
+  consentOk = true;
+  localStorage.setItem('fss_consent', '1');
+  document.getElementById('consent').classList.add('hide');
+};
+
+// Restore previous language & consent
+const savedLang = localStorage.getItem('fss_lang');
+if(savedLang && T[savedLang]) lang = savedLang;
+applyConsentText();
+setLang(lang);
+if(localStorage.getItem('fss_consent')==='1'){
+  consentOk = true;
+  document.getElementById('consent').classList.add('hide');
+}
+</script>
+</body>
+</html>
